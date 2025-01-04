@@ -22,8 +22,8 @@ func LoadConfig() *Config {
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
 		Username: getEnv("DB_USER", "postgres"),
-		Password: getEnv("DB_PASSWORD", "password"),
-		DBName:   getEnv("DB_NAME", "usermanagement"),
+		Password: getEnv("DB_PASSWORD", "postgres"),
+		DBName:   getEnv("DB_NAME", "yourdbname"),
 		JWTKey:   getEnv("JWT_KEY", "secret"),
 	}
 }
