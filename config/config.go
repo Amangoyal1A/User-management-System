@@ -1,35 +1,36 @@
 package config
 
 import (
-	"fmt"
-	"log"
-	"myapp/model"
-	"myapp/utils"
+	"os"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/joho/godotenv"
 )
 
-func InitDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("myapp.db"), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-
-	// AutoMigrate models
-	db.AutoMigrate(&models.User{}, &models.Post{})
-
-	// Seed Data
-	SeedData(db)
-
-	return db
+type Config struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
+	DBName   string
+	JWTKey   string
 }
 
-func SeedData(db *gorm.DB) {
-	var count int64
-	db.Model(&models.User{}).Count(&count)
-	if count == 0 {
-		db.Create(&models.User{Name: "Admin", Email: "admin@example.com",  Password: utils.HashPassword("password")})
-		fmt.Println("Seeded default admin user")
+func LoadConfig() *Config {
+	_ = godotenv.Load() // Load `.env` file
+
+	return &Config{
+		Host:     getEnv("DB_HOST", "localhost"),
+		Port:     getEnv("DB_PORT", "5432"),
+		Username: getEnv("DB_USER", "postgres"),
+		Password: getEnv("DB_PASSWORD", "password"),
+		DBName:   getEnv("DB_NAME", "usermanagement"),
+		JWTKey:   getEnv("JWT_KEY", "secret"),
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }

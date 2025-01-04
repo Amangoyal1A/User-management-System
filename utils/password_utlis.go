@@ -1,17 +1,18 @@
 package utils
 
 import (
+
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 // HashPassword generates a bcrypt hashed password from the plain text
-func HashPassword(password string) string {
+func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Fatalf("Failed to hash password: %v", err)
+		return "", errors.Wrap(err, "[HashPassword]")
 	}
-	return string(hash)
+	return string(hash),err
 }
 
 // CheckPasswordHash compares a hashed password with its plain text equivalent

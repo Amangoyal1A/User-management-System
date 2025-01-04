@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"myapp/model"
-	"myapp/utils"
 	"net/http"
+	"user-management/models"
+	"user-management/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -16,7 +16,8 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	user.Password = utils.HashPassword(user.Password)
+	user.Password, _ = utils.HashPassword(user.Password)
+
 	if err := c.MustGet("db").(*gorm.DB).Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
 		return

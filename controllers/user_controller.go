@@ -1,59 +1,125 @@
 package controllers
 
 import (
-	"myapp/model"
 	"net/http"
+	"strconv"
+	"user-management/models"
+	"user-management/service"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func GetAllUsers(c *gin.Context) {
-	var users []models.User
-	db := c.MustGet("db").(*gorm.DB)
-	db.Find(&users)
-
-	c.JSON(http.StatusOK, users)
+type UserController struct {
+	userService service.UserService
 }
 
-func GetUserByID(c *gin.Context) {
-	var user models.User
-	id := c.Param("id")
-	db := c.MustGet("db").(*gorm.DB)
-
-	if err := db.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
+func NewUserController(userService service.UserService) *UserController {
+	return &UserController{userService: userService}
 }
 
-func UpdateUser(c *gin.Context) {
+// Register a new user
+func (uc *UserController) Register(c *gin.Context) {
 	var user models.User
-	id := c.Param("id")
-	db := c.MustGet("db").(*gorm.DB)
-
-	if err := db.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	db.Save(&user)
-	c.JSON(http.StatusOK, user)
+	res, err := uc.userService.Register(&user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": res})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"user": "user regsiter successfully"})
 }
 
-func DeleteUser(c *gin.Context) {
-	id := c.Param("id")
-	db := c.MustGet("db").(*gorm.DB)
+// Login a user
+func (uc *UserController) Login(c *gin.Context) {
+	var credentials models.LoginRequest
+	if err := c.ShouldBindJSON(&credentials); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
 
-	if err := db.Delete(&models.User{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+	token, err := uc.userService.Login(credentials.Email, credentials.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+// Get all users
+func (uc *UserController) GetAllUsers(c *gin.Context) {
+	users, err := uc.userService.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+// Get user by ID
+func (uc *UserController) GetUserByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	// Convert int to uint
+	userID := uint(id)
+
+	user, err := uc.userService.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+// Update user
+func (uc *UserController) UpdateUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var updatedData models.User
+	if err := c.ShouldBindJSON(&updatedData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	// Convert int to uint
+	userID := uint(id)
+
+	updatedUser, err := uc.userService.UpdateUser(userID, &updatedData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": updatedUser})
+}
+
+// Delete user
+func (uc *UserController) DeleteUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Convert int to uint
+	userID := uint(id)
+
+	err = uc.userService.DeleteUser(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

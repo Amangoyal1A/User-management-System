@@ -1,35 +1,24 @@
 package routes
 
 import (
-	"myapp/controllers"
-	"myapp/middlewares"
+	"user-management/controllers"
+	"user-management/middlewares"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func SetupRoutes(db *gorm.DB) *gin.Engine {
-	r := gin.Default()
-
-	// Inject DB into context
-	r.Use(func(c *gin.Context) {
-		c.Set("db", db)
-		c.Next()
-	})
-
+func SetupRoutes(r *gin.Engine, userController *controllers.UserController) {
 	// Public routes
-	r.POST("/register", controllers.Register)
-	r.POST("/login", controllers.Login)
+	r.POST("/register", userController.Register)
+	r.POST("/login", userController.Login)
 
 	// Protected routes
 	protected := r.Group("/")
-	protected.Use(middlewares.AuthMiddleware())
+	protected.Use(middleware.AuthMiddleware())
 	{
-		protected.GET("/users", controllers.GetAllUsers)
-		protected.GET("/users/:id", controllers.GetUserByID)
-		protected.PUT("/users/:id", controllers.UpdateUser)
-		protected.DELETE("/users/:id", controllers.DeleteUser)
+		protected.GET("/users", userController.GetAllUsers)
+		protected.GET("/users/:id", userController.GetUserByID)
+		protected.PUT("/users/:id", userController.UpdateUser)
+		protected.DELETE("/users/:id", userController.DeleteUser)
 	}
-
-	return r
 }

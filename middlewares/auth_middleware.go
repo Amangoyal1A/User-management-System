@@ -1,29 +1,36 @@
-package middlewares
+package middleware
 
 import (
-	"myapp/utils"
 	"net/http"
 	"strings"
+	"user-management/config"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
 			c.Abort()
 			return
 		}
 
-		token := strings.Split(authHeader, "Bearer ")[1]
-		if _, err := utils.ValidateToken(token); err != nil {
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+
+		claims := jwt.MapClaims{}
+		_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(config.LoadConfig().JWTKey), nil
+		})
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
+		c.Set("user_id", claims["user_id"])
 		c.Next()
 	}
 }

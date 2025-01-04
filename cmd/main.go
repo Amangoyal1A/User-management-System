@@ -1,25 +1,32 @@
 package main
 
 import (
-	"log"
-	"myapp/config"
-	"myapp/routes"
+	"user-management/config"
+	"user-management/connection"
+	"user-management/controllers"
+	"user-management/repository"
+	"user-management/routes"
+	"user-management/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Initialize the database
-	db := config.InitDB()
+	// Load configuration and initialize database
+	cfg := config.LoadConfig()
+	db := connection.InitDB(cfg)
 
-	// Ensure the underlying SQL DB connection is closed when the app exits
-	sqlDB, err := db.DB()
-	if err != nil {
-		log.Fatalf("Failed to get SQL DB: %v", err)
-	}
-	defer sqlDB.Close()
+	// Dependency injection
+	userRepo := repository.NewUserRepository(db)
+	userService := service.NewUserService(userRepo)
+	userControllers := controllers.NewUserController(userService)
 
-	// Set up and run routes
-	r := routes.SetupRoutes(db)
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	// Initialize Gin router
+	r := gin.Default()
+
+	// Setup routes
+	routes.SetupRoutes(r, userControllers)
+
+	// Run server
+	r.Run(":8080")
 }
